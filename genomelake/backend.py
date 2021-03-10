@@ -17,6 +17,8 @@ from .util import one_hot_encode_sequence
 from .util import nan_to_zero
 from .tiledb_array import write_tiledb
 from .tiledb_array import load_tiledb
+from .hub_array import write_hub
+from .hub_array import load_hub
 
 NUM_SEQ_CHARS = 4
 
@@ -28,6 +30,7 @@ _array_writer = {
         arr, rootdir=path, cparams=_blosc_params, mode="w"
     ).flush(),
     "tiledb": write_tiledb,
+    "hub": write_hub,
 }
 
 

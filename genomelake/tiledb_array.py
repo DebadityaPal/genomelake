@@ -13,8 +13,6 @@ SECONDARY_DOMAIN_NAME = "signal_coord"
 GENOME_VALUE_NAME = "v"
 
 DEFAULT_GENOME_TILE_EXTENT = 9000
-DEFAULT_COMPRESSOR = "blosc-lz"
-DEFAULT_COMPRESSOR_LEVEL = -1
 
 
 def write_tiledb(arr, path, overwrite=True):
@@ -26,43 +24,40 @@ def write_tiledb(arr, path, overwrite=True):
     if os.path.exists(path):
         raise FileExistsError("Output path {} already exists".format(path))
 
-    ctx = tiledb.Ctx()
 
     n = arr.shape[0]
     n_tile_extent = min(DEFAULT_GENOME_TILE_EXTENT, n)
 
     d1 = tiledb.Dim(
-        ctx, GENOME_DOMAIN_NAME, domain=(0, n - 1), tile=n_tile_extent, dtype="uint32"
+        name=GENOME_DOMAIN_NAME, domain=(0, n - 1), tile=n_tile_extent, dtype="uint32"
     )
 
     if arr.ndim == 1:
-        domain = tiledb.Domain(ctx, d1)
+        domain = tiledb.Domain(d1)
 
     elif arr.ndim == 2:
         m = arr.shape[1]
         d2 = tiledb.Dim(
-            ctx, SECONDARY_DOMAIN_NAME, domain=(0, m - 1), tile=m, dtype="uint32"
+            name=SECONDARY_DOMAIN_NAME, domain=(0, m - 1), tile=m, dtype="uint32"
         )
-        domain = tiledb.Domain(ctx, d1, d2)
+        domain = tiledb.Domain(d1, d2)
 
     else:
         raise ValueError("tiledb backend only supports 1D or 2D arrays")
 
     v = tiledb.Attr(
-        ctx,
-        GENOME_VALUE_NAME,
-        compressor=(DEFAULT_COMPRESSOR, DEFAULT_COMPRESSOR_LEVEL),
+        name=GENOME_VALUE_NAME,
         dtype="float32",
     )
 
     schema = tiledb.ArraySchema(
-        ctx, domain=domain, attrs=(v,), cell_order="row-major", tile_order="row-major"
+        domain=domain, attrs=(v,), cell_order="row-major", tile_order="row-major"
     )
     A = tiledb.DenseArray.create(path, schema)
 
     values = arr.astype(np.float32)
 
-    with tiledb.DenseArray(ctx, path, mode="w") as A:
+    with tiledb.DenseArray(path, mode="w") as A:
         A[:] = {GENOME_VALUE_NAME: values}
 
 
@@ -77,8 +72,7 @@ class TDBDenseArray(object):
         if isinstance(array, tiledb.DenseArray):
             self._arr = array
         else:
-            ctx = tiledb.Ctx()
-            self._arr = tiledb.DenseArray(ctx, array, mode="r")
+            self._arr = tiledb.DenseArray(array, mode="r")
 
     def __getitem__(self, key):
         return self._arr[key][GENOME_VALUE_NAME]
